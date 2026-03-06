@@ -622,7 +622,11 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest="command", metavar="command")
     subparsers.required = True
 
-    subparsers.add_parser("setup", help="Generate athlete profile via AI prompt")
+    setup_parser = subparsers.add_parser("setup", help="Generate athlete profile via AI prompt")
+    setup_parser.add_argument(
+        "--import", dest="import_file", metavar="FILE",
+        help="Import athlete profile from existing text or markdown file",
+    )
 
     subparsers.add_parser("profile", help="Display athlete profile summary")
 

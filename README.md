@@ -32,7 +32,7 @@ It is built for endurance athletes who want data-driven coaching context without
 ## Installation
 
 ```bash
-git clone https://github.com/yourusername/jezr.git
+git clone https://github.com/funk44/jezr.git
 cd jezr
 pip install -e .
 ```
