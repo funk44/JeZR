@@ -1,0 +1,149 @@
+{
+  "week_start": "2026-01-19",
+  "generated_at": "2026-01-19T18:15:20",
+  "source_file": "./planned_workouts.json",
+  "workouts": [
+    {
+      "date": "2026-01-20",
+      "all_day": true,
+      "sport": "Run",
+      "name": "Anaerobic strides",
+      "sections": [
+        {
+          "name": "Warmup",
+          "trainings": [
+            {
+              "duration": "25m",
+              "pace": 82,
+              "description": "Easy warm-up"
+            }
+          ]
+        },
+        {
+          "name": "Main set",
+          "trainings": [
+            {
+              "repeat": {
+                "count": 8,
+                "trainings": [
+                  {
+                    "duration": "20s",
+                    "pace": 112,
+                    "description": "Stride fast"
+                  },
+                  {
+                    "duration": "90s",
+                    "pace": 68,
+                    "description": "Easy jog"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cooldown",
+          "trainings": [
+            {
+              "duration": "10m",
+              "pace": 82,
+              "description": "Cool-down easy"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-01-21",
+      "all_day": true,
+      "sport": "Run",
+      "name": "Medium aerobic + light progression (11km)",
+      "sections": [
+        {
+          "name": "Run",
+          "trainings": [
+            {
+              "duration": "6km",
+              "pace": 82,
+              "description": "Easy aerobic to 6 km (settle in, relaxed)"
+            },
+            {
+              "duration": "1km",
+              "pace": 85,
+              "description": "Light progression – step 1 (smooth pickup)"
+            },
+            {
+              "duration": "1km",
+              "pace": 88,
+              "description": "Light progression – step 2 (controlled, upper aerobic)"
+            },
+            {
+              "duration": "1km",
+              "pace": 90,
+              "description": "Light progression – step 3 (firm but clearly sub-threshold)"
+            },
+            {
+              "duration": "2km",
+              "pace": 82,
+              "description": "Easy aerobic to finish (cool down, reset)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-01-23",
+      "all_day": true,
+      "sport": "Run",
+      "name": "Recovery",
+      "sections": [
+        {
+          "name": "Run",
+          "trainings": [
+            {
+              "duration": "35m",
+              "pace": 81,
+              "description": "Recovery easy (very controlled)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-01-24",
+      "all_day": true,
+      "sport": "Run",
+      "name": "Medium-long aerobic",
+      "sections": [
+        {
+          "name": "Run",
+          "trainings": [
+            {
+              "duration": "75m",
+              "pace": 82,
+              "description": "Medium-long aerobic"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "date": "2026-01-25",
+      "all_day": true,
+      "sport": "Run",
+      "name": "Long run",
+      "sections": [
+        {
+          "name": "Run",
+          "trainings": [
+            {
+              "duration": "105m",
+              "pace": 82,
+              "description": "Long run easy (don't race it)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

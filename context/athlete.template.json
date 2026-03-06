@@ -1,0 +1,135 @@
+{
+  "_comment": "Copy this file to athlete.json and fill in your details. Run 'jezr setup' for guided generation, or paste the prompt from the README into your AI of choice.",
+  "_note": "Remove all _comment and _note fields from your personal athlete.json — they are documentation only.",
+
+  "last_reviewed": "YYYY-MM-DD",
+  "name": "Your name",
+  "age": 0,
+
+  "goals": {
+    "_comment": "Primary goal is your next A-race or key target. Long-term is your bigger ambition beyond that.",
+    "primary": {
+      "race": "e.g. Gold Coast Marathon",
+      "date": "YYYY-MM-DD",
+      "target_time": "H:MM:SS",
+      "distance": "e.g. Marathon, Half Marathon, 70.3, Century Ride"
+    },
+    "long_term": "e.g. Sub-3 marathon before age 43, complete an Ironman"
+  },
+
+  "current_block": {
+    "_comment": "What phase of training are you in right now, and what does a typical week look like.",
+    "phase": "e.g. Base building, Build, Peak, Taper, Recovery, Off-season",
+    "weekly_run_km": 0,
+    "weekly_ride_hours": 0,
+    "longest_run_km": 0,
+    "longest_ride_hours": 0
+  },
+
+  "thresholds": {
+    "_comment": "Set these from your Intervals.icu Sport Settings. Threshold pace is per km. FTP is in watts.",
+    "run_threshold_pace_per_km": "MM:SS",
+    "ride_ftp_watts": 0
+  },
+
+  "pace_conventions": {
+    "_comment": "Integer percentages of threshold pace used in planned workouts. These are the defaults — adjust if your coach uses different zones.",
+    "recovery": "65-70",
+    "easy": "80-85",
+    "marathon_pace": "88-92",
+    "tempo": "95-100",
+    "threshold": "100",
+    "intervals": "100-110",
+    "strides": "100-112"
+  },
+
+  "ride_conventions": {
+    "_comment": "Integer percentages of FTP used in planned ride workouts.",
+    "recovery": "50-60",
+    "endurance": "60-75",
+    "tempo": "76-90",
+    "threshold": "91-105",
+    "vo2max": "106-120"
+  },
+
+  "sports": {
+    "_comment": "Which sports are active in your training right now.",
+    "run": true,
+    "ride": true,
+    "swim": false,
+    "strength": false
+  },
+
+  "athlete_type": "e.g. Runner, Cyclist, Triathlete, Duathlete",
+
+  "injury_history": {
+    "_comment": "List significant past injuries. Used to avoid repeating patterns that caused problems before.",
+    "items": [
+      {
+        "area": "e.g. Left calf",
+        "year": 0,
+        "notes": "e.g. Grade 2 strain, 6 weeks off, tends to tighten when mileage spikes"
+      }
+    ]
+  },
+
+  "risk_flags": [
+    "_comment: Remove this line. List things to actively avoid in planning.",
+    "e.g. No back-to-back hard days",
+    "e.g. Conservative mileage increases — no more than 10% week on week",
+    "e.g. Avoid hard runs the day after hard Zwift efforts"
+  ],
+
+  "preferred_training_days": {
+    "_comment": "Which days you typically train and what fits on each. Leave blank if flexible.",
+    "monday": "e.g. Rest or recovery",
+    "tuesday": "e.g. Quality run",
+    "wednesday": "e.g. Ride or easy run",
+    "thursday": "e.g. Medium run",
+    "friday": "e.g. Rest or easy",
+    "saturday": "e.g. Long ride or brick",
+    "sunday": "e.g. Long run"
+  },
+
+  "constraints": [
+    "_comment: Remove this line. List regular scheduling constraints.",
+    "e.g. Frequent interstate and international travel — weeks regularly disrupted",
+    "e.g. Early morning runner — sessions before 7am",
+    "e.g. No track access"
+  ],
+
+  "equipment": {
+    "run_shoes": [
+      "e.g. Asics Superblast 2 (easy/long)",
+      "e.g. Adidas Adizero (race)"
+    ],
+    "bike": "e.g. Road bike + Zwift trainer setup",
+    "power_meter": true,
+    "hr_monitor": true,
+    "gps_watch": "e.g. Garmin Forerunner 965"
+  },
+
+  "fuelling": {
+    "_comment": "What works for you in training and racing. Be specific — this context improves plan and feedback quality.",
+    "race_day": "e.g. High5, Precision Fuel pouches, Maurten gels — targeting ~82g carbs/hour",
+    "long_run": "e.g. Gel every 45min from 60min onwards, 500ml electrolyte per hour",
+    "notes": "e.g. Previous GI issues at high carb intake — resolved with current protocol"
+  },
+
+  "environment": {
+    "_comment": "Where and when you typically train. Important for contextualising pace and HR data.",
+    "home_city": "e.g. Melbourne, Australia",
+    "typical_conditions": "e.g. Temperate, training in 15-25°C most of the year",
+    "heat_tolerance": "e.g. Acclimatised — regular training in 28-35°C Brisbane and Sydney summers",
+    "typical_run_time": "e.g. Early morning, 5:30-7am",
+    "typical_terrain": "e.g. Flat road and bike path, occasional hilly trail"
+  },
+
+  "preferences": {
+    "_comment": "How you like your training structured and communicated.",
+    "workout_format": "e.g. Distance-based run segments rather than time-based where possible",
+    "stride_recovery": "e.g. 30-45 seconds between strides",
+    "feedback_style": "e.g. Direct and data-driven — no generic encouragement",
+    "planning_philosophy": "e.g. Conservative and injury-averse — consistency over hero sessions"
+  }
+}

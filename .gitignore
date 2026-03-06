@@ -1,0 +1,8 @@
+context/athlete.json
+data/
+plans/
+.env
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
