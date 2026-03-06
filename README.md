@@ -236,7 +236,7 @@ See [docs/openclaw.md](docs/openclaw.md) for full setup — cron job configurati
 
 **V1.5** — Full ride integration. Structured ride planning, cross-sport fatigue awareness, FTP-based ride workouts. Intervals.icu users skew heavily to cycling and triathlon — rides are a first-class concern, not an afterthought.
 
-**V2** — Mid-week check-ins and athlete sentiment logging, mid-week plan adjustment on fatigue signals, profile import from backup, longitudinal pattern analysis.
+**V2** — Mid-week check-ins and athlete sentiment logging, mid-week plan adjustment on fatigue signals, configurable review schedule, Telegram and additional messaging channels, multi-provider AI support (OpenAI, Google), profile import from backup, longitudinal pattern analysis.
 
 ---
 
