@@ -1,30 +1,55 @@
 # JeZR
 
-An AI training coach that knows your history, watches every session, and proposes — never decides.
+> An AI training coach that knows your history, watches every session, and proposes — never decides.
 
-JeZR connects to Intervals.icu, stores your planned and completed sessions in a local database, and delivers immediate post-workout feedback and a weekly training review via WhatsApp. Every Sunday night it proposes next week's plan. You approve it. It uploads to Intervals.icu and syncs to Garmin.
+---
 
-It is built for endurance athletes who want data-driven coaching context without handing over control of their training to an algorithm.
+## What is this
+
+Most training tools give you data. JeZR gives you coaching.
+
+There's a difference. Data tells you that you ran 12km at 5:14. Coaching tells you that 12km at 5:14 in 29°C humidity, the day after a hard Zwift session, two weeks out from your goal race, was actually a well-executed effort and your HR suggests you're absorbing load well. That's the kind of context that changes how you train.
+
+JeZR is built on a few convictions:
+
+**The athlete stays in control.** JeZR proposes. You approve. Nothing reaches your calendar without your explicit sign-off. It will never auto-adjust your plan, silently reschedule a session, or make decisions on your behalf.
+
+**Context beats data.** The richer JeZR's understanding of you as an athlete — your injury history, how you respond to heat, what your work schedule looks like, what a hard Zwift effort does to your legs — the more useful its coaching becomes. This context lives in two files you own and control, and it gets richer over time.
+
+**Honest feedback, not encouragement.** Post-workout feedback is direct and data-driven. If you went out too hard, JeZR will say so. If the session was well-executed, it will say that too. Generic encouragement is not useful.
+
+**Consistency over cleverness.** The weekly loop — review, propose, approve, upload — is deliberately simple and repeatable. Every Sunday night you get a review of the week and a proposed plan. You reply YES. Done.
 
 ---
 
 ## How it works
 
-**After every session** — JeZR detects your completed run or ride on Intervals.icu, compares it to what was planned, factors in the weather, and sends you a WhatsApp message within minutes. Direct feedback from a coach who has your full context, not a generic notification from a fitness app.
+**After every session** — JeZR detects your completed run or ride on Intervals.icu, compares it to what was planned, enriches it with weather data, and sends you a WhatsApp message within minutes. Not a generic notification — specific feedback grounded in your training history and current block.
 
-**Every Sunday at 9pm** — JeZR reviews the week: what you planned, what you actually did, how conditions affected things. It proposes next week's training. You reply YES. It uploads the plan to Intervals.icu and it syncs to Garmin.
+**Every Sunday at 9pm** — JeZR reviews the full week: what you planned, what you actually did, whether sessions were matched, how conditions affected things. It proposes next week's training based on what just happened. You reply YES and the plan uploads to Intervals.icu and syncs to Garmin.
 
-**If you want to change something** — reply with what you want adjusted. JeZR revises the plan and re-presents it. Loop until you're happy, then YES to upload.
+**If you want to change something** — reply with what you want adjusted. JeZR revises the plan and re-presents it. Loop until you're happy, then YES.
+
+**Every Sunday night after the review** — JeZR backs up your athlete profile and training database to Google Drive automatically.
+
+---
+
+## What JeZR is not
+
+- It is not an autonomous training AI. It does not adjust your plan without asking.
+- It is not a generic fitness app. It knows who you are specifically.
+- It is not a black box. Every proposed plan can be inspected, questioned, and rejected.
+- It is not for everyone. It requires OpenClaw, an always-on device, and some setup investment. It is for athletes who want a tool that actually knows them.
 
 ---
 
 ## Requirements
 
 - [Intervals.icu](https://intervals.icu) account with API access
-- [OpenClaw](https://openclaw.io) running on a always-on device (thin client, NAS, Raspberry Pi)
+- [OpenClaw](https://docs.openclaw.ai) running on an always-on device (thin client, NAS, Raspberry Pi)
 - WhatsApp connected to OpenClaw
 - Google Drive connected to OpenClaw (for weekly backups)
-- Anthropic API key ([get one here](https://console.anthropic.com))
+- [Anthropic API key](https://console.anthropic.com)
 - Python 3.11+
 
 ---
@@ -44,13 +69,13 @@ cp .env.example .env
 ```
 
 ```
-INTERVALS_API_KEY=        # from Intervals.icu → Settings → API
-INTERVALS_ATHLETE_ID=     # your numeric athlete ID from Intervals.icu
-CLAUDE_API_KEY=           # from console.anthropic.com
+INTERVALS_API_KEY=          # from Intervals.icu → Settings → API
+INTERVALS_ATHLETE_ID=       # your numeric athlete ID from Intervals.icu
+CLAUDE_API_KEY=             # from console.anthropic.com
 LOCAL_TIMEZONE=Australia/Melbourne
 JEZR_NOTIFIER=openclaw
-JEZR_OPENCLAW_DIR=~/openclaw
-JEZR_OPENCLAW_OUTBOX=~/openclaw/outbox.txt
+JEZR_OPENCLAW_DIR=~/.openclaw
+JEZR_OPENCLAW_OUTBOX=~/.openclaw/outbox.txt
 ```
 
 ---
@@ -61,41 +86,47 @@ JEZR_OPENCLAW_OUTBOX=~/openclaw/outbox.txt
 jezr setup
 ```
 
-This will:
+This walks you through two things:
 
-1. Print a prompt to generate your athlete profile — paste it into Claude, ChatGPT, or your AI of choice, answer the questions, and save the two output files to `context/`
-2. Validate your profile files
-3. Auto-configure OpenClaw — appends JeZR scheduling and approval blocks to your `HEARTBEAT.md` and `AGENT.md`
+**1. Athlete profile generation**
 
-### Generating your athlete profile
+JeZR prints a prompt. Paste it into Claude, ChatGPT, or your AI of choice and answer the questions conversationally — think of it as telling a new coach everything they need to know about you. The richer your answers, the better the coaching.
 
-`jezr setup` prints a prompt. Paste it into your AI and answer the questions conversationally — think of it as telling a new coach everything they need to know about you. The richer your answers, the more useful JeZR becomes.
+The AI generates two files:
+- `context/athlete.json` — structured variables: threshold pace, race targets, volume, FTP
+- `context/athlete.md` — your narrative coaching context: injury history, how you respond to load, what your life looks like around training, what good feedback means to you
 
-The AI will output two files:
-- `context/athlete.json` — structured variables (threshold pace, race targets, volume ranges)
-- `context/athlete.md` — your narrative coaching context (injury history, how you respond to load, what good feedback looks like, life context)
+Save both to `context/`. Run `jezr profile` to confirm they loaded.
 
-Save both to the `context/` directory. Run `jezr profile` to confirm they loaded correctly.
+**Already have athlete context written somewhere else?**
 
-**These files are never committed to git and never leave your machine except via your own Google Drive backup.**
+```bash
+jezr setup --import ~/path/to/existing-notes.md
+```
+
+Feed in a doc, a coach's notes, a previous AI conversation — anything. JeZR will restructure it into the two profile files and tell you what's missing.
+
+**2. OpenClaw wiring**
+
+After the profile step, `jezr setup` configures OpenClaw automatically — registers the Sunday night cron jobs, adds the poller keepalive to HEARTBEAT.md, and sets up the plan approval handler. See [docs/openclaw.md](docs/openclaw.md) for details.
 
 ---
 
-## Athlete profile maintenance
+## Your athlete profile
 
-Your athlete profile should be reviewed:
-- At the start of each new training block
-- After a major race (add a race report to `athlete.md`)
-- After any significant injury or goal change
-- When you notice a pattern worth capturing
+The profile is the most important part of JeZR. It is what separates coaching from data retrieval.
+
+`athlete.json` holds structured variables the code reads directly. `athlete.md` holds the narrative context that gets injected into every AI call — the stuff a good coach carries in their head. Injury patterns, how you respond to heat, what happens to your training when work gets heavy, what a hard Zwift climb does to your legs for the next three days.
+
+This document evolves. Add a race report after a key event. Note a pattern you've noticed. Update it when something significant changes. The richer it gets, the better the plans get.
 
 ```bash
-jezr profile   # view current profile summary
+jezr profile          # view current profile summary
 ```
 
-JeZR will warn you if your profile hasn't been reviewed in more than 90 days.
+JeZR warns you if the profile hasn't been reviewed in more than 90 days.
 
-**Back up your `athlete.md`** — it accumulates race reports, injury notes, and coaching insights over time. JeZR backs it up automatically to Google Drive every Sunday, but keeping a copy in a private repository is also worth doing.
+**Back it up.** JeZR backs up automatically to Google Drive every Sunday, but keeping a copy in a private repository is also worth doing. This file becomes more valuable over time — losing a year of race reports and coaching notes would be painful.
 
 ---
 
@@ -103,11 +134,12 @@ JeZR will warn you if your profile hasn't been reviewed in more than 90 days.
 
 | Command | Description |
 |---|---|
-| `jezr setup` | First-run setup — athlete profile generation and OpenClaw wiring |
+| `jezr setup` | First-run: athlete profile generation and OpenClaw wiring |
+| `jezr setup --import <file>` | Import existing athlete notes and restructure into profile files |
 | `jezr profile` | View athlete profile summary. Warns if overdue for review. |
 | `jezr poll` | Start the activity poller. Runs until interrupted. |
-| `jezr review` | Trigger weekly review manually — sends WhatsApp with review and proposed plan |
-| `jezr review --week-to-date` | Summarise the current week so far against planned. No new plan. |
+| `jezr review` | Trigger weekly review manually |
+| `jezr review --week-to-date` | Summarise current week against planned — no new plan |
 | `jezr review --feedback "TEXT"` | Revise the pending plan based on your feedback |
 | `jezr upload --planned <file>` | Validate and upload a plan JSON to Intervals.icu |
 | `jezr validate --planned <file>` | Validate a plan JSON without uploading |
@@ -117,106 +149,52 @@ JeZR will warn you if your profile hasn't been reviewed in more than 90 days.
 
 ## Plan validation
 
-Before any plan reaches Intervals.icu it goes through two stages:
+Every proposed plan goes through two stages before you see it:
 
-**Schema validation** — hard check. Pace values must be integers, required fields must be present, structure must be valid. Schema failures block upload.
+**Schema validation** — hard check. Pace values must be integers, required fields must be present, structure must be valid. Schema failures block the plan entirely.
 
-**AI sense check** — advisory. Claude reviews the proposed plan for things the schema can't catch: pace values that don't match session intent, volume spikes, back-to-back hard sessions, structure that doesn't fit your stated training phase. Sense check flags are shown as warnings — you decide whether to act on them.
-
----
-
-## Planned workout schema
-
-Plans are JSON arrays of workout objects. Pace values are integers representing percentage of threshold pace.
-
-```json
-[
-  {
-    "date": "2026-03-10",
-    "all_day": true,
-    "sport": "Run",
-    "name": "Tempo Run",
-    "sections": [
-      {
-        "name": "Warmup",
-        "trainings": [
-          { "duration": "2km", "pace": 82, "description": "Easy warmup" }
-        ]
-      },
-      {
-        "name": "Main set",
-        "trainings": [
-          { "duration": "6km", "pace": 97, "description": "Tempo — controlled effort" }
-        ]
-      },
-      {
-        "name": "Cooldown",
-        "trainings": [
-          { "duration": "2km", "pace": 82, "description": "Easy cooldown" }
-        ]
-      }
-    ]
-  }
-]
-```
-
-See `context/sample_plan.json` for a full week example.
+**AI sense check** — advisory. Claude reviews the plan for things schema validation can't catch: pace values that don't match session intent, volume spikes, back-to-back hard sessions, load that doesn't fit your stated block phase. Flags are shown as warnings alongside the plan — you decide whether to act on them.
 
 ---
 
 ## Pace conventions
 
-| Zone | % of threshold pace |
+Pace values in planned workouts are integers representing percentage of threshold pace. Set your threshold pace in Intervals.icu → Settings → Sport Settings → Run → Threshold Pace.
+
+| Zone | % of threshold |
 |---|---|
 | Recovery | 65–70% |
-| Easy | 80–85% |
+| Easy / long run | 80–85% |
 | Marathon pace | 88–92% |
 | Tempo | 95–100% |
 | Threshold | 100% |
 | Intervals | 100–110% |
 | Strides | 100–112% |
 
-Set your threshold pace in Intervals.icu → Settings → Sport Settings → Run → Threshold Pace.
-
 ---
 
 ## Weekly backup
 
-Every Sunday night JeZR automatically backs up:
-- `context/athlete.json`
-- `context/athlete.md`
-- `data/jezr.db`
-- `plans/` archived plans
+Every Sunday night JeZR backs up:
+- `context/athlete.json` and `context/athlete.md`
+- `data/jezr.db` — full history of planned and actual sessions
+- `plans/` — archived approved plans
 
-The backup is a dated zip file pushed to Google Drive via OpenClaw. Local copies are retained for 4 weeks (configurable via `JEZR_BACKUP_RETAIN_WEEKS`).
+Backup is a dated zip pushed to Google Drive via OpenClaw. Local copies kept for 4 weeks (configurable via `JEZR_BACKUP_RETAIN_WEEKS`).
 
 ---
 
 ## OpenClaw integration
 
-See [docs/openclaw.md](docs/openclaw.md) for full setup instructions including HEARTBEAT.md and AGENT.md configuration, SMB share access from Windows, and the Google Drive backup flow.
-
----
-
-## Philosophy
-
-JeZR is built on a few principles:
-
-**The athlete stays in control.** JeZR proposes. You approve. Nothing reaches your calendar without your sign-off.
-
-**Context beats data.** Knowing you ran 12km at 5:14 is less useful than knowing you ran 12km at 5:14 in 29°C humidity the day after a hard Zwift session, two weeks out from a goal race. JeZR accumulates that context over time.
-
-**Consistency over cleverness.** The weekly loop — review, propose, approve, upload — is deliberately simple and repeatable. It does not auto-adjust your plan or make decisions on your behalf.
-
-**Honest feedback.** Post-workout feedback is direct and data-driven. If you went out too hard, JeZR will say so. If the session was well-executed, it will say that too. Generic encouragement is not useful.
+See [docs/openclaw.md](docs/openclaw.md) for full setup — cron job configuration, HEARTBEAT.md and AGENT.md wiring, SMB share access from Windows, and the Google Drive backup flow.
 
 ---
 
 ## Roadmap
 
-**V1.5** — Full ride integration: structured ride planning, cross-sport fatigue awareness, FTP-based ride workouts alongside threshold-based run workouts.
+**V1.5** — Full ride integration. Structured ride planning, cross-sport fatigue awareness, FTP-based ride workouts. Intervals.icu users skew heavily to cycling and triathlon — rides are a first-class concern, not an afterthought.
 
-**V2** — Mid-week check-ins and sentiment logging, mid-week plan adjustment based on fatigue signals, longitudinal pattern analysis.
+**V2** — Mid-week check-ins and athlete sentiment logging, mid-week plan adjustment on fatigue signals, profile import from backup, longitudinal pattern analysis.
 
 ---
 
@@ -224,7 +202,7 @@ JeZR is built on a few principles:
 
 JeZR is open source. Issues and pull requests welcome.
 
-If you're building on JeZR or have adapted it for your own training setup, open an issue and share what you've done — particularly interested in triathlon and cycling use cases ahead of v1.5.
+Particularly interested in triathlon and cycling use cases ahead of v1.5. If you've adapted JeZR for your setup, open an issue and share what you've done.
 
 ---
 
