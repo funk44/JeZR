@@ -1,36 +1,78 @@
 # JeZR
 
-> An AI training coach that knows your history, watches every session, and proposes — never decides.
+> An AI training coach in your WhatsApp. No app. No dashboard. No login.
 
 ---
 
-## What is this
+## The idea
 
-Most training tools give you data. JeZR gives you coaching.
+You finish a run. Your phone buzzes. A message breaks down how it went — pace against plan, HR, conditions, what it means for the week ahead. You don't open an app. You don't log into a dashboard. You just read it and get on with your day.
 
-There's a difference. Data tells you that you ran 12km at 5:14. Coaching tells you that 12km at 5:14 in 29°C humidity, the day after a hard Zwift session, two weeks out from your goal race, was actually a well-executed effort and your HR suggests you're absorbing load well. That's the kind of context that changes how you train.
+Every Sunday night, another message. Your week in review. Next week's training proposed. You reply YES. The plan uploads to Intervals.icu and syncs to Garmin. If you want to change something, you say so. JeZR revises and re-presents. Loop until you're happy, then YES.
+
+That's it. Your entire coaching relationship happens in WhatsApp.
+
+---
+
+## What it looks like
+
+**After a run:**
+
+```
+Solid 12km at 5:14 with avg HR 152 — right in the aerobic pocket and well
+within the planned 5:10–5:20 window. Conditions were warm (27°C, 78% humidity)
+so the slight HR elevation makes sense. Good execution.
+```
+
+**Sunday night:**
+
+```
+Week of 9 Mar
+
+52km with good execution on Tuesday's tempo. Long run on Sunday was slower than
+planned but 28°C and 81% humidity accounts for it. Wednesday's intervals were
+skipped — worth picking up early next week if legs feel good.
+
+─────────────────
+PROPOSED NEXT WEEK
+
+Mon 16 Mar — Rest
+Tue 17 Mar — Tempo Run (11km)
+  Warmup: 2km easy (82%)
+  Main: 6km tempo (97%)
+  Cooldown: 3km easy (82%)
+Wed 18 Mar — Recovery Run (7km)
+  35min easy (81%)
+Thu 19 Mar — Rest
+Fri 20 Mar — Intervals (10km)
+  Warmup: 2km easy (82%)
+  Main: 6x [1km @ 105% / 90s recovery]
+  Cooldown: 2km easy (82%)
+Sat 21 Mar — Rest
+Sun 22 Mar — Long Run (22km)
+  110min easy (82%)
+
+─────────────────
+Reply YES to upload to Intervals.icu, or tell me what to change.
+```
+
+You reply: *"Move the intervals to Thursday, I've got an early flight Friday"*
+
+JeZR revises and sends the updated plan back. You reply YES.
+
+---
+
+## What's behind it
 
 JeZR is built on a few convictions:
 
-**The athlete stays in control.** JeZR proposes. You approve. Nothing reaches your calendar without your explicit sign-off. It will never auto-adjust your plan, silently reschedule a session, or make decisions on your behalf.
+**The athlete stays in control.** JeZR proposes. You approve. Nothing reaches your calendar without your explicit sign-off. It will never auto-adjust your plan or make decisions on your behalf.
 
-**Context beats data.** The richer JeZR's understanding of you as an athlete — your injury history, how you respond to heat, what your work schedule looks like, what a hard Zwift effort does to your legs — the more useful its coaching becomes. This context lives in two files you own and control, and it gets richer over time.
+**Context beats data.** Knowing you ran 12km at 5:14 is less useful than knowing you ran 12km at 5:14 in 29°C humidity, the day after a hard Zwift session, two weeks out from your goal race. JeZR accumulates that context over time — your injury history, how you respond to heat, what your work schedule does to your training — and uses it every time it speaks to you.
 
-**Honest feedback, not encouragement.** Post-workout feedback is direct and data-driven. If you went out too hard, JeZR will say so. If the session was well-executed, it will say that too. Generic encouragement is not useful.
+**Honest feedback, not encouragement.** If you went out too hard, JeZR will say so. Generic encouragement is not useful.
 
-**Consistency over cleverness.** The weekly loop — review, propose, approve, upload — is deliberately simple and repeatable. Every Sunday night you get a review of the week and a proposed plan. You reply YES. Done.
-
----
-
-## How it works
-
-**After every session** — JeZR detects your completed run or ride on Intervals.icu, compares it to what was planned, enriches it with weather data, and sends you a WhatsApp message within minutes. Not a generic notification — specific feedback grounded in your training history and current block.
-
-**Every Sunday at 9pm** — JeZR reviews the full week: what you planned, what you actually did, whether sessions were matched, how conditions affected things. It proposes next week's training based on what just happened. You reply YES and the plan uploads to Intervals.icu and syncs to Garmin.
-
-**If you want to change something** — reply with what you want adjusted. JeZR revises the plan and re-presents it. Loop until you're happy, then YES.
-
-**Every Sunday night after the review** — JeZR backs up your athlete profile and training database to Google Drive automatically.
+**Consistency over cleverness.** The weekly loop is deliberately simple. Review, propose, approve, upload. Every week. No black box.
 
 ---
 
@@ -39,7 +81,7 @@ JeZR is built on a few convictions:
 - It is not an autonomous training AI. It does not adjust your plan without asking.
 - It is not a generic fitness app. It knows who you are specifically.
 - It is not a black box. Every proposed plan can be inspected, questioned, and rejected.
-- It is not for everyone. It requires OpenClaw, an always-on device, and some setup investment. It is for athletes who want a tool that actually knows them.
+- It requires OpenClaw, an always-on device, and some setup investment. It is for athletes who want a tool that actually knows them.
 
 ---
 
@@ -108,17 +150,17 @@ Feed in a doc, a coach's notes, a previous AI conversation — anything. JeZR wi
 
 **2. OpenClaw wiring**
 
-After the profile step, `jezr setup` configures OpenClaw automatically — registers the Sunday night cron jobs, adds the poller keepalive to HEARTBEAT.md, and sets up the plan approval handler. See [docs/openclaw.md](docs/openclaw.md) for details.
+After the profile step, `jezr setup` configures OpenClaw automatically — registers the Sunday night cron jobs, adds the poller keepalive to HEARTBEAT.md, and sets up the plan approval handler in AGENT.md. See [docs/openclaw.md](docs/openclaw.md) for details.
 
 ---
 
 ## Your athlete profile
 
-The profile is the most important part of JeZR. It is what separates coaching from data retrieval.
+The profile is what separates coaching from data retrieval.
 
-`athlete.json` holds structured variables the code reads directly. `athlete.md` holds the narrative context that gets injected into every AI call — the stuff a good coach carries in their head. Injury patterns, how you respond to heat, what happens to your training when work gets heavy, what a hard Zwift climb does to your legs for the next three days.
+`athlete.json` holds structured variables the code reads directly. `athlete.md` holds the narrative context injected into every AI call — the stuff a good coach carries in their head. Injury patterns, how you respond to heat, what happens to your training when work gets heavy, what a hard Zwift climb does to your legs for the next three days.
 
-This document evolves. Add a race report after a key event. Note a pattern you've noticed. Update it when something significant changes. The richer it gets, the better the plans get.
+This document evolves. Add a race report after a key event. Note a pattern you've noticed. The richer it gets, the better the plans get.
 
 ```bash
 jezr profile          # view current profile summary
@@ -126,7 +168,7 @@ jezr profile          # view current profile summary
 
 JeZR warns you if the profile hasn't been reviewed in more than 90 days.
 
-**Back it up.** JeZR backs up automatically to Google Drive every Sunday, but keeping a copy in a private repository is also worth doing. This file becomes more valuable over time — losing a year of race reports and coaching notes would be painful.
+**Back it up.** JeZR backs up automatically to Google Drive every Sunday, but keeping a copy in a private repository is also worth doing. This file becomes more valuable over time.
 
 ---
 
