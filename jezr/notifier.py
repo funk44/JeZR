@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 from abc import ABC, abstractmethod
 
@@ -18,31 +19,29 @@ class StdoutNotifier(Notifier):
 
 
 class OpenClawNotifier(Notifier):
-    """Delivers messages via OpenClaw's outbox file.
+    """Send messages via the OpenClaw CLI (openclaw message send)."""
 
-    OpenClaw monitors a designated outbox file and forwards new lines to WhatsApp.
-    The outbox path is read from JEZR_OPENCLAW_OUTBOX env var.
-    Each message is written as a single line (newlines within message replaced with
-    the literal two-character sequence \\n).
-    If the outbox path is not set, falls back to StdoutNotifier with a warning.
-    """
-
-    def __init__(self) -> None:
-        self._outbox = os.getenv("JEZR_OPENCLAW_OUTBOX", "")
-        if not self._outbox:
-            print(
-                "WARNING: JEZR_OPENCLAW_OUTBOX not set — OpenClawNotifier falling back to stdout.",
-                file=sys.stderr,
-            )
-        self._fallback = StdoutNotifier()
+    def __init__(self, target: str, channel: str = "whatsapp") -> None:
+        """
+        Args:
+            target: Phone number or handle to send to (e.g. +61430220917)
+            channel: OpenClaw channel (default: whatsapp)
+        """
+        self.target = target
+        self.channel = channel
 
     def send(self, message: str) -> None:
-        if not self._outbox:
-            self._fallback.send(message)
-            return
-        line = message.replace("\n", "\\n")
-        with open(self._outbox, "a", encoding="utf-8") as f:
-            f.write(line + "\n")
+        cmd = [
+            "openclaw", "message", "send",
+            "--channel", self.channel,
+            "--target", self.target,
+            "--message", message,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"OpenClaw send failed (exit {result.returncode}): {result.stderr.strip()}"
+            )
 
 
 def get_notifier() -> Notifier:
@@ -50,7 +49,19 @@ def get_notifier() -> Notifier:
 
     Values: 'openclaw' | 'stdout' (default: 'stdout')
     """
-    kind = os.getenv("JEZR_NOTIFIER", "stdout").strip().lower()
-    if kind == "openclaw":
-        return OpenClawNotifier()
+    notifier_type = os.environ.get("JEZR_NOTIFIER", "stdout").lower()
+
+    if notifier_type == "openclaw":
+        target = os.environ.get("JEZR_OPENCLAW_TARGET")
+        channel = os.environ.get("JEZR_OPENCLAW_CHANNEL", "whatsapp")
+
+        if not target:
+            print(
+                "WARNING: JEZR_OPENCLAW_TARGET not set — OpenClawNotifier falling back to stdout.",
+                file=sys.stderr,
+            )
+            return StdoutNotifier()
+
+        return OpenClawNotifier(target=target, channel=channel)
+
     return StdoutNotifier()

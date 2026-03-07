@@ -292,8 +292,6 @@ def run_poller(
             if act_dt > last_seen:
                 new_activities.append(a)
 
-        _log(f"Poll: {len(activities)} fetched, {len(new_activities)} new")
-
         if new_activities:
             # Enrich all with weather before writing to DB
             try:
@@ -304,6 +302,7 @@ def run_poller(
                         f"Weather enrichment failed: {exc}",
                         extra={"traceback": traceback.format_exc()})
 
+            new_count = 0
             conn = db_mod.get_connection(db_path)
             try:
                 for activity in new_activities:
@@ -318,6 +317,13 @@ def run_poller(
                                 conn=conn)
                         continue
 
+                    # Skip if already in DB (duplicate guard — intervals_id is the stable unique key)
+                    if db_mod.get_actual_by_intervals_id(conn, mapped["intervals_id"]) is not None:
+                        if debug:
+                            _log(f"Already seen: {mapped.get('intervals_id')} — skipping")
+                        continue
+
+                    new_count += 1
                     actual_id = db_mod.insert_actual(conn, mapped)
                     act_intervals_id = mapped.get("intervals_id", "")
                     _db_log(db_path, "INFO", "poller", "activity_fetched",
@@ -375,6 +381,10 @@ def run_poller(
                                 conn=conn)
             finally:
                 conn.close()
+
+            _log(f"Poll: {len(activities)} fetched, {new_count} new")
+        else:
+            _log(f"Poll: {len(activities)} fetched, 0 new")
 
         last_seen = now
         _save_state(state_path, last_seen)

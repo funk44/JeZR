@@ -206,6 +206,35 @@ If the user sends any other reply after receiving a training plan:
 _JEZR_MARKER = "# JeZR"
 
 
+_PROJECT_ROOT = Path(__file__).parent.parent
+
+
+def _update_env_file(env_path: Path, key: str, value: str) -> None:
+    """Set or update a key=value line in a .env file.
+
+    If the key already exists, replace it. If not, append it.
+    Creates the file if it doesn't exist.
+    """
+    lines = []
+    found = False
+
+    if env_path.exists():
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+
+    new_lines = []
+    for line in lines:
+        if line.startswith(f"{key}=") or line.startswith(f"{key} ="):
+            new_lines.append(f"{key}={value}")
+            found = True
+        else:
+            new_lines.append(line)
+
+    if not found:
+        new_lines.append(f"{key}={value}")
+
+    env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+
+
 def _setup_openclaw() -> None:
     """Phase 2 of setup: auto-wire JeZR blocks into OpenClaw HEARTBEAT.md and AGENT.md."""
     answer = input("Do you want to configure OpenClaw integration now? (yes/no): ").strip().lower()
@@ -228,6 +257,20 @@ def _setup_openclaw() -> None:
         print()
         _print_openclaw_blocks_manual()
         return
+
+    # Prompt for target phone number
+    print()
+    print("JeZR will send messages via: openclaw message send --channel whatsapp --target <number>")
+    target = input("Enter your WhatsApp number (e.g. +61430220917): ").strip()
+
+    # Write env vars
+    env_path = _PROJECT_ROOT / ".env"
+    if target:
+        _update_env_file(env_path, "JEZR_OPENCLAW_TARGET", target)
+        _update_env_file(env_path, "JEZR_OPENCLAW_CHANNEL", "whatsapp")
+        print(f"Set JEZR_OPENCLAW_TARGET={target} in .env")
+    _update_env_file(env_path, "JEZR_NOTIFIER", "openclaw")
+    print("Set JEZR_NOTIFIER=openclaw in .env")
 
     jezr_cmd = shutil.which("jezr") or "jezr"
 

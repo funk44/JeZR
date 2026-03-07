@@ -96,49 +96,40 @@ JeZR is built on a few convictions:
 
 ---
 
-## Installation
+## Getting started
+
+### 1. Install
 
 ```bash
 git clone https://github.com/funk44/jezr.git
 cd jezr
-pip install -e .
+pip install -e . --break-system-packages
 ```
 
-Copy the environment file and fill in your credentials:
+### 2. Configure
+
+Copy `.env.example` to `.env` and add your credentials:
 
 ```bash
 cp .env.example .env
+nano .env
 ```
 
-```
-INTERVALS_API_KEY=          # from Intervals.icu → Settings → API
-INTERVALS_ATHLETE_ID=       # your numeric athlete ID from Intervals.icu
-CLAUDE_API_KEY=             # from console.anthropic.com
-LOCAL_TIMEZONE=Australia/Melbourne
-JEZR_NOTIFIER=openclaw
-JEZR_OPENCLAW_DIR=~/.openclaw
-JEZR_OPENCLAW_OUTBOX=~/.openclaw/outbox.txt
-```
+Required:
+- `INTERVALS_API_KEY` — from Intervals.icu Settings → API
+- `INTERVALS_ATHLETE_ID` — your numeric athlete ID
+- `CLAUDE_API_KEY` — from console.anthropic.com
+- `LOCAL_TIMEZONE` — e.g. `Australia/Melbourne`
 
----
-
-## First run
+### 3. Set up your athlete profile
 
 ```bash
 jezr setup
 ```
 
-This walks you through two things:
-
-**1. Athlete profile generation**
-
-JeZR prints a prompt. Paste it into Claude, ChatGPT, or your AI of choice and answer the questions conversationally — think of it as telling a new coach everything they need to know about you. The richer your answers, the better the coaching.
-
-The AI generates two files:
-- `context/athlete.json` — structured variables: threshold pace, race targets, volume, FTP
-- `context/athlete.md` — your narrative coaching context: injury history, how you respond to load, what your life looks like around training, what good feedback means to you
-
-Save both to `context/`. Run `jezr profile` to confirm they loaded.
+This will:
+- Walk you through generating your `athlete.json` profile
+- Wire JeZR into OpenClaw (if you use it) — auto-detects outbox, updates `.env`, adds blocks to HEARTBEAT.md and AGENTS.md
 
 **Already have athlete context written somewhere else?**
 
@@ -148,9 +139,28 @@ jezr setup --import ~/path/to/existing-notes.md
 
 Feed in a doc, a coach's notes, a previous AI conversation — anything. JeZR will restructure it into the two profile files and tell you what's missing.
 
-**2. OpenClaw wiring**
+### 4. Start the poller
 
-After the profile step, `jezr setup` configures OpenClaw automatically — registers the Sunday night cron jobs, adds the poller keepalive to HEARTBEAT.md, and sets up the plan approval handler in AGENT.md. See [docs/openclaw.md](docs/openclaw.md) for details.
+```bash
+jezr poll
+```
+
+Run this in a tmux session so it persists:
+
+```bash
+tmux new -s jezr
+jezr poll
+# Detach: Ctrl+B D
+# Reattach: tmux attach -t jezr
+```
+
+### 5. Run your first weekly review
+
+```bash
+jezr review
+```
+
+Reply YES to upload the plan to Intervals.icu, or tell JeZR what to change.
 
 ---
 
