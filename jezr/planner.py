@@ -21,6 +21,8 @@ def _athlete_summary(athlete_context: dict) -> str:
     race_date = primary.get("date", "")
     target = primary.get("target_time", "")
 
+    prefs = athlete_context.get("preferences") or {}
+
     parts = [f"Athlete: {name}"]
     if age:
         parts.append(f"Age: {age}")
@@ -32,6 +34,12 @@ def _athlete_summary(athlete_context: dict) -> str:
         parts.append(f"Target weekly volume: {weekly_km} km")
     if race:
         parts.append(f"Goal race: {race} ({race_date}) — target {target}")
+    if prefs.get("workout_format"):
+        parts.append(f"Workout format: {prefs['workout_format']}")
+    if prefs.get("stride_recovery"):
+        parts.append(f"Stride recovery: {prefs['stride_recovery']}")
+    if prefs.get("planning_philosophy"):
+        parts.append(f"Planning philosophy: {prefs['planning_philosophy']}")
     return "\n".join(parts)
 
 
@@ -151,6 +159,12 @@ def generate_workout_feedback(
     """
     import anthropic
 
+    prefs = athlete_context.get("preferences") or {}
+    feedback_style = prefs.get("feedback_style", "").strip()
+    system = _FEEDBACK_SYSTEM
+    if feedback_style:
+        system = _FEEDBACK_SYSTEM + f"\nFeedback style: {feedback_style}"
+
     athlete_block = _athlete_summary(athlete_context)
     activity_block = _format_actual(actual)
 
@@ -191,7 +205,7 @@ def generate_workout_feedback(
     message = client.messages.create(
         model=_MODEL,
         max_tokens=1024,
-        system=_FEEDBACK_SYSTEM,
+        system=system,
         messages=[{"role": "user", "content": user_prompt}],
     )
     return message.content[0].text.strip()
@@ -208,6 +222,8 @@ what was missed, and any patterns worth flagging (fatigue, weather impact, load 
 Your proposed plan must:
 - Be realistic given what actually happened this week
 - Match the athlete's stated training structure and preferences
+- Respect the athlete's workout format preference (distance-based vs time-based, stride recovery, etc.)
+- Apply the athlete's planning philosophy (e.g. conservative and injury-averse, consistency over hero sessions)
 - Use only Run workouts (Rides are noted but not planned via this tool)
 - Output pace values as integers (percentage of threshold pace) — never floats
 - Match the schema of the sample plan provided exactly

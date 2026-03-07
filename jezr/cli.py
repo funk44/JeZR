@@ -382,6 +382,18 @@ def cmd_profile(args: argparse.Namespace) -> None:
         else:
             print(f"  Fuelling: {fuelling}")
 
+    preferences = profile.get("preferences")
+    if preferences:
+        print()
+        if isinstance(preferences, dict):
+            print("  Preferences:")
+            max_len = max(len(k.replace("_", " ").title()) for k in preferences)
+            for key, val in preferences.items():
+                label = key.replace("_", " ").title()
+                print(f"    {label:<{max_len}}  {val}")
+        else:
+            print(f"  Preferences: {preferences}")
+
     _show("  Heat tolerance", profile.get("heat_tolerance"))
     _show("  Notes", profile.get("notes"))
 
