@@ -220,6 +220,7 @@ Your review should be honest, specific, and grounded in the data. Note what went
 what was missed, and any patterns worth flagging (fatigue, weather impact, load spikes).
 
 Your proposed plan must:
+- Only include actual training sessions — omit rest days entirely, never create workout objects with pace 0
 - Be realistic given what actually happened this week
 - Match the athlete's stated training structure and preferences
 - Respect the athlete's workout format preference (distance-based vs time-based, stride recovery, etc.)
