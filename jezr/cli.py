@@ -292,11 +292,25 @@ def _setup_openclaw() -> None:
     if target:
         _update_env_file(env_path, "JEZR_OPENCLAW_TARGET", target)
         _update_env_file(env_path, "JEZR_OPENCLAW_CHANNEL", "whatsapp")
+    # Detect openclaw binary path
+    openclaw_bin = shutil.which("openclaw")
+    if openclaw_bin:
+        print(f"Found openclaw at: {openclaw_bin}")
+        _update_env_file(env_path, "JEZR_OPENCLAW_BIN", openclaw_bin)
+    else:
+        print("WARNING: openclaw not found on PATH.")
+        bin_path = input("Enter full path to openclaw binary (or press Enter to skip): ").strip()
+        if bin_path:
+            _update_env_file(env_path, "JEZR_OPENCLAW_BIN", bin_path)
+            openclaw_bin = bin_path
+
     print(f"Updated {env_path}:")
     print(f"  JEZR_NOTIFIER=openclaw")
     if target:
         print(f"  JEZR_OPENCLAW_TARGET={target}")
         print(f"  JEZR_OPENCLAW_CHANNEL=whatsapp")
+    if openclaw_bin:
+        print(f"  JEZR_OPENCLAW_BIN={openclaw_bin}")
 
     jezr_cmd = shutil.which("jezr") or "jezr"
 

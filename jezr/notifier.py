@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import sys
 from abc import ABC, abstractmethod
@@ -31,12 +32,20 @@ class OpenClawNotifier(Notifier):
         self.channel = channel
 
     def send(self, message: str) -> None:
-        cmd = [
-            "openclaw", "message", "send",
-            "--channel", self.channel,
-            "--target", self.target,
-            "--message", message,
-        ]
+        openclaw_bin = (
+            os.environ.get("JEZR_OPENCLAW_BIN")
+            or shutil.which("openclaw")
+        )
+        if not openclaw_bin:
+            raise RuntimeError(
+                "openclaw binary not found on PATH. "
+                "Set JEZR_OPENCLAW_BIN in .env to the full path "
+                "(e.g. /home/user/.npm-global/bin/openclaw)"
+            )
+        cmd = [openclaw_bin, "message", "send",
+               "--channel", self.channel,
+               "--target", self.target,
+               "--message", message]
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             raise RuntimeError(
