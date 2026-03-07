@@ -209,6 +209,26 @@ _JEZR_MARKER = "# JeZR"
 _PROJECT_ROOT = Path(__file__).parent.parent
 
 
+def _resolve_env_path() -> Path:
+    """Return the .env path to write to, in priority order:
+    1. cwd/.env  — if running from repo root and it exists
+    2. _PROJECT_ROOT/.env  — relative to cli.py install location
+    3. ~/jezr/.env  — user home fallback
+
+    Creates and returns option 1 if nothing is found.
+    """
+    candidates = [
+        Path.cwd() / ".env",
+        _PROJECT_ROOT / ".env",
+        Path("~/jezr/.env").expanduser(),
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    # None exist — create at cwd
+    return candidates[0]
+
+
 def _update_env_file(env_path: Path, key: str, value: str) -> None:
     """Set or update a key=value line in a .env file.
 
@@ -264,13 +284,16 @@ def _setup_openclaw() -> None:
     target = input("Enter your WhatsApp number (e.g. +61430220917): ").strip()
 
     # Write env vars
-    env_path = _PROJECT_ROOT / ".env"
+    env_path = _resolve_env_path()
+    _update_env_file(env_path, "JEZR_NOTIFIER", "openclaw")
     if target:
         _update_env_file(env_path, "JEZR_OPENCLAW_TARGET", target)
         _update_env_file(env_path, "JEZR_OPENCLAW_CHANNEL", "whatsapp")
-        print(f"Set JEZR_OPENCLAW_TARGET={target} in .env")
-    _update_env_file(env_path, "JEZR_NOTIFIER", "openclaw")
-    print("Set JEZR_NOTIFIER=openclaw in .env")
+    print(f"Updated {env_path}:")
+    print(f"  JEZR_NOTIFIER=openclaw")
+    if target:
+        print(f"  JEZR_OPENCLAW_TARGET={target}")
+        print(f"  JEZR_OPENCLAW_CHANNEL=whatsapp")
 
     jezr_cmd = shutil.which("jezr") or "jezr"
 
