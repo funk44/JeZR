@@ -212,7 +212,7 @@ def run_weekly_review(
             week_summary_line,
             "",
             "─" * 17,
-            f"NEXT WEEK  •  {total_km}km across {session_count} sessions",
+            f"NEXT WEEK  •  {f'{total_km}km across ' if total_km > 0 else ''}{session_count} sessions",
             "",
             plan_text,
         ]
