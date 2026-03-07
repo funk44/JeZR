@@ -1,6 +1,7 @@
 import json
 import sys
 import time
+import traceback
 from datetime import datetime, timezone, timedelta, date
 from pathlib import Path
 from typing import Optional
@@ -210,6 +211,30 @@ def _log(message: str) -> None:
     print(f"[{ts}] {message}")
 
 
+def _db_log(
+    db_path: str,
+    level: str,
+    source: str,
+    event: str,
+    message: str,
+    activity_id: str | None = None,
+    extra: dict | None = None,
+    conn=None,
+) -> None:
+    """Log to tbl_log. Uses provided conn if given, otherwise opens a brief one."""
+    try:
+        if conn is not None:
+            db_mod.log_event(conn, level, source, event, message, activity_id, extra)
+        else:
+            c = db_mod.get_connection(db_path)
+            try:
+                db_mod.log_event(c, level, source, event, message, activity_id, extra)
+            finally:
+                c.close()
+    except Exception:
+        pass  # Never let logging failures crash the poller
+
+
 def run_poller(
     db_path: str,
     intervals_client,
@@ -232,6 +257,8 @@ def run_poller(
     is_backlog = True  # First pass processes historical activities silently
 
     _log(f"Poller started. Last seen: {last_seen.date()}. Poll interval: {poll_interval_seconds}s.")
+    _db_log(db_path, "INFO", "poller", "poller_start",
+            f"Poller started. Last seen: {last_seen.date()}. Poll interval: {poll_interval_seconds}s.")
     consecutive_failures = 0
 
     while True:
@@ -245,6 +272,9 @@ def run_poller(
         except Exception as exc:
             consecutive_failures += 1
             _log(f"ERROR polling Intervals.icu: {exc}")
+            _db_log(db_path, "ERROR", "poller", "poll_error",
+                    f"Intervals.icu poll failed: {exc}",
+                    extra={"traceback": traceback.format_exc(), "failure_count": consecutive_failures})
             sleep_s = poll_interval_seconds * (2 if consecutive_failures >= 3 else 1)
             _log(f"Backing off {sleep_s}s (failure #{consecutive_failures})")
             time.sleep(sleep_s)
@@ -272,17 +302,30 @@ def run_poller(
                 enrich_activities_with_weather(new_activities, debug=debug)
             except Exception as exc:
                 _log(f"WARNING: weather enrichment failed: {exc}")
+                _db_log(db_path, "WARNING", "poller", "weather_failed",
+                        f"Weather enrichment failed: {exc}",
+                        extra={"traceback": traceback.format_exc()})
 
             conn = db_mod.get_connection(db_path)
             try:
                 for activity in new_activities:
                     mapped = _map_activity(activity)
                     if mapped is None:
+                        act_type = activity.get("type", "unknown")
                         if debug:
-                            _log(f"Skipping unsupported type: {activity.get('type')}")
+                            _log(f"Skipping unsupported type: {act_type}")
+                        _db_log(db_path, "INFO", "poller", "activity_skipped",
+                                f"Skipped unsupported activity type: {act_type}",
+                                activity_id=str(activity.get("id", "")),
+                                conn=conn)
                         continue
 
                     actual_id = db_mod.insert_actual(conn, mapped)
+                    act_intervals_id = mapped.get("intervals_id", "")
+                    _db_log(db_path, "INFO", "poller", "activity_fetched",
+                            f"{mapped.get('name', 'Activity')} (intervals_id: {act_intervals_id})",
+                            activity_id=act_intervals_id,
+                            conn=conn)
 
                     planned_id = _match_planned(conn, activity, mapped)
                     if planned_id is not None:
@@ -291,6 +334,10 @@ def run_poller(
                     if is_backlog:
                         # Backlog: mark as sent without notifying
                         db_mod.update_actual_feedback_sent(conn, actual_id)
+                        _db_log(db_path, "INFO", "poller", "feedback_backlog",
+                                f"Backlog activity marked sent: {mapped.get('name', act_intervals_id)}",
+                                activity_id=act_intervals_id,
+                                conn=conn)
                         continue
 
                     # Real-time: generate and send feedback
@@ -310,11 +357,20 @@ def run_poller(
                         if feedback:
                             notifier.send(feedback)
                         db_mod.update_actual_feedback_sent(conn, actual_id)
+                        _db_log(db_path, "INFO", "poller", "feedback_sent",
+                                f"{mapped.get('name', act_intervals_id)}",
+                                activity_id=act_intervals_id,
+                                conn=conn)
                     except Exception as exc:
                         _log(
                             f"WARNING: feedback generation failed for "
                             f"{mapped.get('intervals_id')}: {exc}"
                         )
+                        _db_log(db_path, "ERROR", "poller", "feedback_failed",
+                                f"Feedback generation failed for {act_intervals_id}: {exc}",
+                                activity_id=act_intervals_id,
+                                extra={"traceback": traceback.format_exc()},
+                                conn=conn)
             finally:
                 conn.close()
 

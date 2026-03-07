@@ -1,5 +1,6 @@
 import os
 import sys
+import traceback
 import zipfile
 from datetime import date, timedelta
 from pathlib import Path
@@ -88,16 +89,41 @@ def run_backup(debug: bool = False) -> tuple[str, int]:
     Returns:
         (zip_path, pruned_count)
     """
+    from jezr import db as db_mod
+
     base_dir = Path(__file__).parent.parent
     backup_dir = os.getenv("JEZR_BACKUP_DIR", str(base_dir / "backups"))
+    db_path = os.getenv("JEZR_DB_PATH", str(base_dir / "data" / "jezr.db"))
     try:
         retain_weeks = int(os.getenv("JEZR_BACKUP_RETAIN_WEEKS", "4"))
     except ValueError:
         retain_weeks = 4
 
-    return create_backup(
-        base_dir=str(base_dir),
-        backup_dir=backup_dir,
-        retain_weeks=retain_weeks,
-        debug=debug,
-    )
+    try:
+        result = create_backup(
+            base_dir=str(base_dir),
+            backup_dir=backup_dir,
+            retain_weeks=retain_weeks,
+            debug=debug,
+        )
+        zip_path, pruned = result
+        conn = db_mod.get_connection(db_path)
+        try:
+            db_mod.log_event(conn, "INFO", "backup", "backup_ok",
+                             f"Backup created: {zip_path}",
+                             extra={"pruned": pruned})
+        finally:
+            conn.close()
+        return result
+    except Exception as exc:
+        try:
+            conn = db_mod.get_connection(db_path)
+            try:
+                db_mod.log_event(conn, "ERROR", "backup", "backup_failed",
+                                 f"Backup failed: {exc}",
+                                 extra={"traceback": traceback.format_exc()})
+            finally:
+                conn.close()
+        except Exception:
+            pass
+        raise

@@ -347,16 +347,97 @@ def cmd_profile(args: argparse.Namespace) -> None:
     injuries = profile.get("injury_history") or []
     if injuries:
         print()
-        print(f"  Injury history: {', '.join(str(i) for i in injuries)}")
+        print("  Injury history:")
+        for item in injuries:
+            print(f"    - {item}")
 
     flags = profile.get("risk_flags") or []
     if flags:
-        print(f"  Risk flags: {', '.join(str(f) for f in flags)}")
+        print()
+        print("  Risk flags:")
+        for flag in flags:
+            print(f"    - {flag}")
 
-    _show("  Preferred training days", profile.get("preferred_training_days"))
-    _show("  Fuelling", profile.get("fuelling"))
+    training_days = profile.get("preferred_training_days")
+    if training_days:
+        print()
+        if isinstance(training_days, dict):
+            print("  Preferred training days:")
+            max_len = max(len(day.title()) for day in training_days)
+            for day, desc in training_days.items():
+                label = day.title()
+                print(f"    {label:<{max_len}}  {desc}")
+        else:
+            print(f"  Preferred training days: {training_days}")
+
+    fuelling = profile.get("fuelling")
+    if fuelling:
+        print()
+        if isinstance(fuelling, dict):
+            print("  Fuelling:")
+            max_len = max(len(k.replace("_", " ").title()) for k in fuelling)
+            for key, val in fuelling.items():
+                label = key.replace("_", " ").title()
+                print(f"    {label:<{max_len}}  {val}")
+        else:
+            print(f"  Fuelling: {fuelling}")
+
     _show("  Heat tolerance", profile.get("heat_tolerance"))
     _show("  Notes", profile.get("notes"))
+
+
+def cmd_log(args: argparse.Namespace) -> None:
+    from jezr import db as db_mod
+
+    db_path = os.getenv("JEZR_DB_PATH", "./data/jezr.db")
+    if not Path(db_path).exists():
+        print("No log database found. Run the poller or a review first.")
+        return
+
+    n = getattr(args, "n", 50)
+    level = getattr(args, "level", None)
+    source = getattr(args, "source", None)
+    debug = getattr(args, "debug", False)
+
+    conn = db_mod.get_connection(db_path)
+    try:
+        entries = db_mod.get_log_entries(conn, n=n, level=level, source=source)
+    finally:
+        conn.close()
+
+    if not entries:
+        print("No log entries found.")
+        return
+
+    try:
+        term_width = os.get_terminal_size().columns
+    except OSError:
+        term_width = 120
+
+    # Column widths: timestamp(19) level(7) source(8) event(16) — rest is message
+    fixed = 19 + 1 + 7 + 1 + 8 + 1 + 16 + 2
+    msg_width = max(20, term_width - fixed)
+
+    for entry in entries:
+        ts = entry.get("created_at", "")[:19].replace("T", " ")
+        lvl = (entry.get("level") or "").ljust(7)
+        src = (entry.get("source") or "").ljust(8)
+        evt = (entry.get("event") or "").ljust(16)
+        msg = entry.get("message") or ""
+        if len(msg) > msg_width:
+            msg = msg[:msg_width - 1] + "…"
+        print(f"{ts}  {lvl}  {src}  {evt}  {msg}")
+
+        if debug and entry.get("extra_json"):
+            try:
+                import json as _json
+                extra = _json.loads(entry["extra_json"])
+                tb = extra.get("traceback")
+                if tb:
+                    for line in tb.rstrip().splitlines():
+                        print(f"    {line}")
+            except Exception:
+                pass
 
 
 def cmd_backup(args: argparse.Namespace) -> None:
@@ -632,6 +713,14 @@ def main() -> None:
 
     subparsers.add_parser("backup", help="Create a backup zip of athlete context, database, and plans")
 
+    log_parser = subparsers.add_parser("log", help="Show recent log entries")
+    log_parser.add_argument("--n", type=int, default=50, metavar="N",
+                            help="Number of entries to show (default: 50)")
+    log_parser.add_argument("--level", metavar="LEVEL",
+                            help="Filter by level: INFO, WARNING, ERROR")
+    log_parser.add_argument("--source", metavar="SOURCE",
+                            help="Filter by source: poller, review, upload, backup")
+
     poll_parser = subparsers.add_parser("poll", help="Start the activity poller (runs until interrupted)")
     poll_parser.add_argument(
         "--interval", type=int, default=300, metavar="SECONDS",
@@ -666,6 +755,7 @@ def main() -> None:
     dispatch = {
         "setup": cmd_setup,
         "profile": cmd_profile,
+        "log": cmd_log,
         "backup": cmd_backup,
         "poll": cmd_poll,
         "review": cmd_review,

@@ -1,6 +1,7 @@
 import json
 import re
 import sys
+import traceback
 from datetime import datetime, timezone, date, timedelta
 from pathlib import Path
 from typing import Optional
@@ -79,6 +80,34 @@ def upload_plan(
     if not workouts:
         raise ValueError("No workouts provided.")
 
+    try:
+        return _upload_plan_inner(
+            workouts=workouts,
+            db_path=db_path,
+            intervals_client=intervals_client,
+            plans_dir=plans_dir,
+            adhoc=adhoc,
+            debug=debug,
+        )
+    except Exception as exc:
+        conn = db_mod.get_connection(db_path)
+        try:
+            db_mod.log_event(conn, "ERROR", "upload", "upload_failed",
+                             f"Upload failed: {exc}",
+                             extra={"traceback": traceback.format_exc()})
+        finally:
+            conn.close()
+        raise
+
+
+def _upload_plan_inner(
+    workouts: list[dict],
+    db_path: str,
+    intervals_client,
+    plans_dir: str,
+    adhoc: bool = False,
+    debug: bool = False,
+) -> dict:
     # 1. Validate all before touching any external systems.
     for i, workout in enumerate(workouts):
         try:
@@ -154,6 +183,11 @@ def upload_plan(
                 ids_matched += 1
             else:
                 ids_missing.append(ext_id)
+
+        db_mod.log_event(conn, "INFO", "upload", "upload_ok",
+                         f"Uploaded {len(events)} workout(s) for week of {week_start}",
+                         extra={"uploaded": len(events), "ids_matched": ids_matched,
+                                "ids_missing": ids_missing})
     finally:
         conn.close()
 

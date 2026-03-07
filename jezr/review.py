@@ -1,4 +1,5 @@
 import json
+import traceback
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
@@ -150,82 +151,102 @@ def run_weekly_review(
     conn = db_mod.get_connection(db_path)
     try:
         week_summary = db_mod.get_week_summary(conn, week_start, week_end)
+        db_mod.log_event(conn, "INFO", "review", "review_start",
+                         f"Weekly review triggered for week of {week_start}")
     finally:
         conn.close()
 
-    # Generate review + proposed plan via Claude
-    review = planner_mod.generate_weekly_review(
-        week_summary=week_summary,
-        athlete_context=athlete_context,
-        athlete_narrative=athlete_narrative,
-        sample_plan=sample_plan,
-        api_key=api_key,
-        debug=debug,
-    )
-    review_text = review["review_text"]
-    proposed_plan = review["proposed_plan"]
+    try:
+        # Generate review + proposed plan via Claude
+        review = planner_mod.generate_weekly_review(
+            week_summary=week_summary,
+            athlete_context=athlete_context,
+            athlete_narrative=athlete_narrative,
+            sample_plan=sample_plan,
+            api_key=api_key,
+            debug=debug,
+        )
+        review_text = review["review_text"]
+        proposed_plan = review["proposed_plan"]
 
-    # Validate the proposed plan
-    validation = validate_and_sense_check(
-        workouts=proposed_plan,
-        athlete_context=athlete_context,
-        athlete_narrative=athlete_narrative,
-        previous_week_summary=week_summary,
-        api_key=api_key,
-        debug=debug,
-    )
-    schema_errors = validation["schema_errors"]
-    sense_check_flags = validation["sense_check_flags"]
+        # Validate the proposed plan
+        validation = validate_and_sense_check(
+            workouts=proposed_plan,
+            athlete_context=athlete_context,
+            athlete_narrative=athlete_narrative,
+            previous_week_summary=week_summary,
+            api_key=api_key,
+            debug=debug,
+        )
+        schema_errors = validation["schema_errors"]
+        sense_check_flags = validation["sense_check_flags"]
 
-    # Format human-readable plan
-    plan_text = _format_plan_for_whatsapp(proposed_plan)
+        # Format human-readable plan
+        plan_text = _format_plan_for_whatsapp(proposed_plan)
 
-    # Build WhatsApp message
-    msg_parts = [
-        f"Week of {week_start}",
-        "",
-        review_text,
-        "",
-        "\u2015" * 17,
-        "PROPOSED NEXT WEEK",
-        "",
-        plan_text,
-    ]
+        # Build WhatsApp message
+        msg_parts = [
+            f"Week of {week_start}",
+            "",
+            review_text,
+            "",
+            "\u2015" * 17,
+            "PROPOSED NEXT WEEK",
+            "",
+            plan_text,
+        ]
 
-    if schema_errors:
+        if schema_errors:
+            msg_parts += [
+                "",
+                "\u2015" * 17,
+                "SCHEMA ERRORS (must fix before uploading):",
+            ]
+            for err in schema_errors:
+                msg_parts.append(f"  - {err}")
+
+        if sense_check_flags:
+            msg_parts += [
+                "",
+                "\u2015" * 17,
+                "SENSE CHECK FLAGS (advisory):",
+            ]
+            for flag in sense_check_flags:
+                msg_parts.append(f"  - {flag}")
+
         msg_parts += [
             "",
             "\u2015" * 17,
-            "SCHEMA ERRORS (must fix before uploading):",
+            "Reply YES to upload to Intervals.icu, or tell me what to change.",
+            "(Or run: jezr upload --planned data/pending_plan.json)",
         ]
-        for err in schema_errors:
-            msg_parts.append(f"  - {err}")
 
-    if sense_check_flags:
-        msg_parts += [
-            "",
-            "\u2015" * 17,
-            "SENSE CHECK FLAGS (advisory):",
-        ]
-        for flag in sense_check_flags:
-            msg_parts.append(f"  - {flag}")
+        message = "\n".join(msg_parts)
+        notifier.send(message)
 
-    msg_parts += [
-        "",
-        "\u2015" * 17,
-        "Reply YES to upload to Intervals.icu, or tell me what to change.",
-        "(Or run: jezr upload --planned data/pending_plan.json)",
-    ]
+        # Save pending plan
+        pending_path = Path(db_path).parent / "pending_plan.json"
+        pending_path.parent.mkdir(parents=True, exist_ok=True)
+        pending_path.write_text(
+            json.dumps(proposed_plan, indent=2), encoding="utf-8"
+        )
 
-    message = "\n".join(msg_parts)
-    notifier.send(message)
+        conn2 = db_mod.get_connection(db_path)
+        try:
+            db_mod.log_event(conn2, "INFO", "review", "review_sent",
+                             f"Week of {week_start}")
+        finally:
+            conn2.close()
 
-    # Save pending plan
-    pending_path = Path(db_path).parent / "pending_plan.json"
-    pending_path.parent.mkdir(parents=True, exist_ok=True)
-    pending_path.write_text(
-        json.dumps(proposed_plan, indent=2), encoding="utf-8"
-    )
+    except Exception as exc:
+        conn3 = db_mod.get_connection(db_path)
+        try:
+            db_mod.log_event(conn3, "ERROR", "review", "review_failed",
+                             f"Weekly review failed: {exc}",
+                             extra={"traceback": traceback.format_exc()})
+        finally:
+            conn3.close()
+        raise
 
     return {
         "week_start": week_start,
@@ -273,6 +294,14 @@ def run_week_to_date_summary(
         debug=debug,
     )
     notifier.send(summary)
+
+    conn = db_mod.get_connection(db_path)
+    try:
+        db_mod.log_event(conn, "INFO", "review", "wtd_sent",
+                         f"Week-to-date summary sent for week of {week_start}")
+    finally:
+        conn.close()
+
     return summary
 
 
@@ -387,6 +416,13 @@ def run_feedback_revision(
 
     # Overwrite pending plan
     pending_path.write_text(json.dumps(proposed_plan, indent=2), encoding="utf-8")
+
+    conn = db_mod.get_connection(db_path)
+    try:
+        db_mod.log_event(conn, "INFO", "review", "revision_sent",
+                         f"Plan revision sent based on feedback")
+    finally:
+        conn.close()
 
     return {
         "review_text": review_text,

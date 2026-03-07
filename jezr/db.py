@@ -1,5 +1,7 @@
+import json
 import os
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -37,6 +39,17 @@ CREATE TABLE IF NOT EXISTS tbl_actual (
     feedback_sent INTEGER NOT NULL DEFAULT 0,
     raw_json TEXT NOT NULL,
     seen_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS tbl_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    level TEXT NOT NULL,
+    source TEXT NOT NULL,
+    event TEXT NOT NULL,
+    message TEXT NOT NULL,
+    activity_id TEXT,
+    extra_json TEXT
 );
 """
 
@@ -236,3 +249,50 @@ def get_week_summary(
         "unmatched_planned": unmatched_planned,
         "unmatched_actual": unmatched_actual,
     }
+
+
+# ── tbl_log ───────────────────────────────────────────────────────────────────
+
+def log_event(
+    conn: sqlite3.Connection,
+    level: str,
+    source: str,
+    event: str,
+    message: str,
+    activity_id: str | None = None,
+    extra: dict | None = None,
+) -> None:
+    """Insert a log row."""
+    created_at = datetime.now(tz=timezone.utc).replace(microsecond=0).isoformat()
+    extra_json = json.dumps(extra) if extra is not None else None
+    with conn:
+        conn.execute(
+            """
+            INSERT INTO tbl_log (created_at, level, source, event, message, activity_id, extra_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (created_at, level, source, event, message, activity_id, extra_json),
+        )
+
+
+def get_log_entries(
+    conn: sqlite3.Connection,
+    n: int = 50,
+    level: str | None = None,
+    source: str | None = None,
+) -> list[dict]:
+    """Return the most recent n log entries, optionally filtered by level or source."""
+    conditions = []
+    params: list = []
+    if level:
+        conditions.append("level = ?")
+        params.append(level)
+    if source:
+        conditions.append("source = ?")
+        params.append(source)
+    where = (" WHERE " + " AND ".join(conditions)) if conditions else ""
+    params.append(n)
+    rows = conn.execute(
+        f"SELECT * FROM tbl_log{where} ORDER BY id DESC LIMIT ?", params
+    ).fetchall()
+    return _rows_to_dicts(rows)

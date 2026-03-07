@@ -186,6 +186,7 @@ JeZR warns you if the profile hasn't been reviewed in more than 90 days.
 | `jezr upload --planned <file>` | Validate and upload a plan JSON to Intervals.icu |
 | `jezr validate --planned <file>` | Validate a plan JSON without uploading |
 | `jezr backup` | Manually trigger a backup |
+| `jezr log` | Show recent log entries. Options: `--n`, `--level`, `--source` |
 
 ---
 
