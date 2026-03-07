@@ -463,6 +463,14 @@ def cmd_poll(args: argparse.Namespace) -> None:
     db_path = os.getenv("JEZR_DB_PATH", "./data/jezr.db")
     interval = getattr(args, "interval", 300)
 
+    athlete_context = {}
+    athlete_narrative = ""
+    if ATHLETE_PROFILE_PATH.exists():
+        with ATHLETE_PROFILE_PATH.open(encoding="utf-8") as f:
+            athlete_context = json.load(f)
+    if ATHLETE_NARRATIVE_PATH.exists():
+        athlete_narrative = ATHLETE_NARRATIVE_PATH.read_text(encoding="utf-8")
+
     print("Poller started. Press Ctrl+C to stop.")
     client = IntervalsClient(api_key=env.api_key, athlete_id=env.athlete_id)
     notifier = get_notifier()
@@ -472,6 +480,8 @@ def cmd_poll(args: argparse.Namespace) -> None:
             intervals_client=client,
             notifier=notifier,
             api_key=claude_env.api_key,
+            athlete_context=athlete_context,
+            athlete_narrative=athlete_narrative,
             poll_interval_seconds=interval,
             debug=args.debug,
         )

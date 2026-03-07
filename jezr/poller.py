@@ -240,6 +240,8 @@ def run_poller(
     intervals_client,
     notifier,
     api_key: str,
+    athlete_context: dict,
+    athlete_narrative: str,
     poll_interval_seconds: int = 300,
     debug: bool = False,
 ) -> None:
@@ -254,7 +256,6 @@ def run_poller(
     db_mod.init_db(db_path)
     state_path = Path(db_path).parent / "poller_state.json"
     last_seen = _load_state(state_path)
-    is_backlog = True  # First pass processes historical activities silently
 
     _log(f"Poller started. Last seen: {last_seen.date()}. Poll interval: {poll_interval_seconds}s.")
     _db_log(db_path, "INFO", "poller", "poller_start",
@@ -291,10 +292,7 @@ def run_poller(
             if act_dt > last_seen:
                 new_activities.append(a)
 
-        _log(
-            f"Poll: {len(activities)} fetched, {len(new_activities)} new "
-            f"({'backlog' if is_backlog else 'realtime'})"
-        )
+        _log(f"Poll: {len(activities)} fetched, {len(new_activities)} new")
 
         if new_activities:
             # Enrich all with weather before writing to DB
@@ -331,9 +329,12 @@ def run_poller(
                     if planned_id is not None:
                         db_mod.update_actual_match(conn, actual_id, planned_id)
 
-                    if is_backlog:
-                        # Backlog: mark as sent without notifying
+                    # Backlog: activity predates today — mark sent without notifying
+                    activity_date = mapped.get("date", "")
+                    today = date.today().isoformat()
+                    if activity_date < today:
                         db_mod.update_actual_feedback_sent(conn, actual_id)
+                        _log(f"Backlog: {mapped.get('name', activity_date)} ({activity_date}) — marked sent silently")
                         _db_log(db_path, "INFO", "poller", "feedback_backlog",
                                 f"Backlog activity marked sent: {mapped.get('name', act_intervals_id)}",
                                 activity_id=act_intervals_id,
@@ -351,7 +352,8 @@ def run_poller(
                         feedback = planner_mod.generate_workout_feedback(
                             actual=mapped,
                             planned=planned_row,
-                            athlete_context={},
+                            athlete_context=athlete_context,
+                            athlete_narrative=athlete_narrative,
                             api_key=api_key,
                         )
                         if feedback:
@@ -375,7 +377,6 @@ def run_poller(
                 conn.close()
 
         last_seen = now
-        is_backlog = False
         _save_state(state_path, last_seen)
 
         try:
