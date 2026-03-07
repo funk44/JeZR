@@ -126,8 +126,9 @@
   },
 
   "preferences": {
-    "_comment": "How you like your training structured and communicated.",
-    "workout_format": "e.g. Distance-based run segments rather than time-based where possible",
+    "_comment": "How you like your training structured and communicated. These are injected as hard constraints into every planning prompt.",
+    "workout_format": "distance — use km-based segments (e.g. 5km, 12km), never minutes",
+    "_workout_format_note": "Or set to 'time — use minute-based segments (e.g. 30min, 45min)' if preferred",
     "stride_recovery": "e.g. 30-45 seconds between strides",
     "feedback_style": "e.g. Direct and data-driven — no generic encouragement",
     "planning_philosophy": "e.g. Conservative and injury-averse — consistency over hero sessions"

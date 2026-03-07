@@ -34,13 +34,41 @@ def _athlete_summary(athlete_context: dict) -> str:
         parts.append(f"Target weekly volume: {weekly_km} km")
     if race:
         parts.append(f"Goal race: {race} ({race_date}) — target {target}")
-    if prefs.get("workout_format"):
-        parts.append(f"Workout format: {prefs['workout_format']}")
-    if prefs.get("stride_recovery"):
-        parts.append(f"Stride recovery: {prefs['stride_recovery']}")
-    if prefs.get("planning_philosophy"):
-        parts.append(f"Planning philosophy: {prefs['planning_philosophy']}")
+    if prefs.get("feedback_style"):
+        parts.append(f"Feedback style: {prefs['feedback_style']}")
     return "\n".join(parts)
+
+
+def _athlete_constraints(athlete_context: dict) -> str:
+    """Render athlete preferences as a PLANNING CONSTRAINTS block for prompt injection.
+
+    Framed as constraints rather than context so Claude treats them as mandatory.
+    Returns empty string if no preferences are set.
+    """
+    prefs = athlete_context.get("preferences") or {}
+    constraints = []
+
+    workout_format = prefs.get("workout_format", "")
+    if workout_format:
+        constraints.append(
+            f"Workout format: {workout_format} — use this format for ALL run segment durations, no exceptions"
+        )
+
+    stride_recovery = prefs.get("stride_recovery", "")
+    if stride_recovery:
+        constraints.append(f"Stride/interval recovery: {stride_recovery}")
+
+    planning_philosophy = prefs.get("planning_philosophy", "")
+    if planning_philosophy:
+        constraints.append(f"Planning philosophy: {planning_philosophy}")
+
+    if not constraints:
+        return ""
+
+    lines = ["PLANNING CONSTRAINTS — follow these strictly, they override general coaching defaults:"]
+    for c in constraints:
+        lines.append(f"  - {c}")
+    return "\n".join(lines)
 
 
 def _format_actual(actual: dict) -> str:
@@ -277,6 +305,7 @@ def generate_weekly_review(
     athlete_block = _athlete_summary(athlete_context)
     week_block = _format_week_summary(week_summary)
     sample_block = json.dumps(sample_plan, indent=2)
+    constraints_block = _athlete_constraints(athlete_context)
 
     today = date.today()
     days_until_monday = (7 - today.weekday()) % 7
@@ -294,6 +323,8 @@ WEEK {week_summary.get('week_start')} — {week_summary.get('week_end')}:
 
 PROPOSED PLAN TARGET WEEK: {next_monday.isoformat()} to {next_sunday.isoformat()}
 All workout dates in proposed_plan MUST fall within this range. Do not use dates outside this range.
+
+{constraints_block}
 
 Sample plan schema (your proposed_plan array must match this exactly — field names, pace as integers, duration format):
 {sample_block}
@@ -361,6 +392,7 @@ def generate_week_to_date_summary(
 
     athlete_block = _athlete_summary(athlete_context)
     week_block = _format_week_summary(week_summary)
+    constraints_block = _athlete_constraints(athlete_context)
 
     completed_count = len(week_summary.get("actual") or [])
     remaining = week_summary.get("unmatched_planned") or []
@@ -375,6 +407,8 @@ Week to date ({week_summary.get('week_start')} — today):
 Sessions completed so far: {completed_count}
 Sessions still planned: {len(remaining)}
 {("Remaining: " + ", ".join(p.get("name", "?") for p in remaining)) if remaining else ""}
+
+{constraints_block}
 
 Provide a brief check-in: what's been done, how it looks, anything to watch for the rest of the week.
 """
@@ -442,6 +476,7 @@ def revise_plan(
     athlete_block = _athlete_summary(athlete_context)
     current_plan_json = json.dumps(current_plan, indent=2)
     sample_block = json.dumps(sample_plan, indent=2)
+    constraints_block = _athlete_constraints(athlete_context)
 
     today = date.today()
     days_until_monday = (7 - today.weekday()) % 7
@@ -462,6 +497,8 @@ Athlete feedback:
 
 PROPOSED PLAN TARGET WEEK: {next_monday.isoformat()} to {next_sunday.isoformat()}
 All workout dates in proposed_plan MUST fall within this range. Do not use dates outside this range.
+
+{constraints_block}
 
 Sample plan schema (your proposed_plan array must match this exactly — field names, pace as integers, duration format):
 {sample_block}
