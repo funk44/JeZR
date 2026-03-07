@@ -1,3 +1,4 @@
+import os
 import sys
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
@@ -234,8 +235,19 @@ def enrich_activities_with_weather(
 
         start_latlng = _extract_latlng(activity, "start")
         if start_latlng is None:
-            _debug(f"Skipping activity {activity_id}: missing lat/lng", debug)
-            continue
+            # Fall back to default location if configured
+            default_lat = os.getenv("JEZR_DEFAULT_LAT")
+            default_lng = os.getenv("JEZR_DEFAULT_LNG")
+            if default_lat and default_lng:
+                try:
+                    start_latlng = (float(default_lat), float(default_lng))
+                    _debug(f"Activity {activity_id}: no lat/lng, using default location", debug)
+                except ValueError:
+                    _debug(f"Skipping activity {activity_id}: invalid JEZR_DEFAULT_LAT/LNG", debug)
+                    continue
+            else:
+                _debug(f"Skipping activity {activity_id}: missing lat/lng and no default set", debug)
+                continue
 
         start_dt, end_dt = _extract_start_end(activity)
         if start_dt is None:
