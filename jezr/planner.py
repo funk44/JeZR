@@ -214,7 +214,8 @@ Your proposed plan must:
 
 Respond ONLY with a JSON object in this exact format:
 {
-  "review_text": "<3-5 sentence review>",
+  "week_summary_line": "<1 sentence: total km, sessions completed, key observation>",
+  "review_text": "<2-3 sentence review>",
   "proposed_plan": [<array of workout objects matching sample plan schema>]
 }
 No preamble, no markdown, no explanation outside the JSON.
@@ -304,6 +305,7 @@ Sample plan schema (your proposed_plan array must match this exactly — field n
         ) from exc
 
     return {
+        "week_summary_line": result.get("week_summary_line", ""),
         "review_text": result.get("review_text", ""),
         "proposed_plan": result.get("proposed_plan", []),
     }
@@ -382,11 +384,9 @@ The athlete has reviewed the proposed plan and provided specific feedback.
 Revise the plan to address their feedback while maintaining training integrity.
 Do not make changes beyond what the feedback requests.
 
-Your revised review_text should briefly acknowledge what was changed and why, e.g.:
-"Moved Wednesday's tempo to Thursday as requested. Rest of the week unchanged."
-
 Respond ONLY with a JSON object in this exact format:
 {
+  "week_summary_line": "<1 sentence acknowledging what was changed>",
   "review_text": "<1-3 sentence acknowledgement of the change>",
   "proposed_plan": [<array of workout objects matching sample plan schema>]
 }
@@ -473,6 +473,7 @@ Sample plan schema (your proposed_plan array must match this exactly — field n
         ) from exc
 
     return {
+        "week_summary_line": result.get("week_summary_line", ""),
         "review_text": result.get("review_text", ""),
         "proposed_plan": result.get("proposed_plan", []),
     }

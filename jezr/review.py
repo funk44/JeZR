@@ -11,6 +11,24 @@ from jezr.validator import validate_and_sense_check
 
 # ── Plan formatting ───────────────────────────────────────────────────────────
 
+def _plan_total_km(workouts: list) -> float:
+    """Sum distance_km across all workouts where the field is present."""
+    total = 0.0
+    for w in workouts:
+        dist = w.get("distance_km") or w.get("distance")
+        if dist:
+            try:
+                total += float(dist)
+            except (TypeError, ValueError):
+                pass
+    return round(total, 1)
+
+
+def _plan_session_count(workouts: list) -> int:
+    """Count workouts that have actual session content (sections or trainings)."""
+    return len([w for w in workouts if w.get("sections") or w.get("trainings")])
+
+
 def _format_plan_for_whatsapp(workouts: list[dict]) -> str:
     """Render a proposed plan as plain text suitable for WhatsApp.
 
@@ -166,6 +184,7 @@ def run_weekly_review(
             api_key=api_key,
             debug=debug,
         )
+        week_summary_line = review["week_summary_line"]
         review_text = review["review_text"]
         proposed_plan = review["proposed_plan"]
 
@@ -183,15 +202,17 @@ def run_weekly_review(
 
         # Format human-readable plan
         plan_text = _format_plan_for_whatsapp(proposed_plan)
+        total_km = _plan_total_km(proposed_plan)
+        session_count = _plan_session_count(proposed_plan)
 
         # Build WhatsApp message
         msg_parts = [
             f"Week of {week_start}",
             "",
-            review_text,
+            week_summary_line,
             "",
-            "\u2015" * 17,
-            "PROPOSED NEXT WEEK",
+            "─" * 17,
+            f"NEXT WEEK  •  {total_km}km across {session_count} sessions",
             "",
             plan_text,
         ]
@@ -199,25 +220,24 @@ def run_weekly_review(
         if schema_errors:
             msg_parts += [
                 "",
-                "\u2015" * 17,
+                "─" * 17,
                 "SCHEMA ERRORS (must fix before uploading):",
             ]
             for err in schema_errors:
                 msg_parts.append(f"  - {err}")
 
         if sense_check_flags:
+            flag_word = "flag" if len(sense_check_flags) == 1 else "flags"
             msg_parts += [
                 "",
-                "\u2015" * 17,
-                "SENSE CHECK FLAGS (advisory):",
+                f"⚠️ {len(sense_check_flags)} advisory {flag_word}",
+                # TODO v2: "— details sent to [email]" once email notifier is implemented
             ]
-            for flag in sense_check_flags:
-                msg_parts.append(f"  - {flag}")
 
         msg_parts += [
             "",
-            "\u2015" * 17,
-            "Reply YES to upload to Intervals.icu, or tell me what to change.",
+            "─" * 17,
+            "Reply YES to upload, or tell me what to change.",
             "(Or run: jezr upload --planned data/pending_plan.json)",
         ]
 
@@ -251,6 +271,7 @@ def run_weekly_review(
     return {
         "week_start": week_start,
         "week_end": week_end,
+        "week_summary_line": week_summary_line,
         "review_text": review_text,
         "proposed_plan": proposed_plan,
         "schema_errors": schema_errors,
@@ -358,6 +379,7 @@ def run_feedback_revision(
         api_key=api_key,
         debug=debug,
     )
+    week_summary_line = revision["week_summary_line"]
     review_text = revision["review_text"]
     proposed_plan = revision["proposed_plan"]
 
@@ -376,12 +398,14 @@ def run_feedback_revision(
 
     # Format revised plan for WhatsApp
     plan_text = _format_plan_for_whatsapp(proposed_plan)
+    total_km = _plan_total_km(proposed_plan)
+    session_count = _plan_session_count(proposed_plan)
 
     msg_parts = [
-        review_text,
+        week_summary_line,
         "",
-        "\u2015" * 17,
-        "REVISED PLAN",
+        "─" * 17,
+        f"REVISED PLAN  •  {total_km}km across {session_count} sessions",
         "",
         plan_text,
     ]
@@ -389,25 +413,23 @@ def run_feedback_revision(
     if schema_errors:
         msg_parts += [
             "",
-            "\u2015" * 17,
+            "─" * 17,
             "SCHEMA ERRORS (must fix before uploading):",
         ]
         for err in schema_errors:
             msg_parts.append(f"  - {err}")
 
     if sense_check_flags:
+        flag_word = "flag" if len(sense_check_flags) == 1 else "flags"
         msg_parts += [
             "",
-            "\u2015" * 17,
-            "SENSE CHECK FLAGS (advisory):",
+            f"⚠️ {len(sense_check_flags)} advisory {flag_word}",
         ]
-        for flag in sense_check_flags:
-            msg_parts.append(f"  - {flag}")
 
     msg_parts += [
         "",
-        "\u2015" * 17,
-        "Reply YES to upload to Intervals.icu, or tell me what to change.",
+        "─" * 17,
+        "Reply YES to upload, or tell me what to change.",
         "(Or run: jezr upload --planned data/pending_plan.json)",
     ]
 
@@ -425,6 +447,7 @@ def run_feedback_revision(
         conn.close()
 
     return {
+        "week_summary_line": week_summary_line,
         "review_text": review_text,
         "proposed_plan": proposed_plan,
         "schema_errors": schema_errors,
