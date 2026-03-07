@@ -317,15 +317,44 @@ def run_poller(
                                 conn=conn)
                         continue
 
-                    # Skip if already in DB (duplicate guard — intervals_id is the stable unique key)
-                    if db_mod.get_actual_by_intervals_id(conn, mapped["intervals_id"]) is not None:
-                        if debug:
-                            _log(f"Already seen: {mapped.get('intervals_id')} — skipping")
+                    # Duplicate guard — intervals_id is the stable unique key
+                    act_intervals_id = mapped.get("intervals_id", "")
+                    existing = db_mod.get_actual_by_intervals_id(conn, mapped["intervals_id"])
+                    if existing is not None:
+                        if existing.get("feedback_sent", 1) == 0:
+                            # Already in DB but feedback not yet sent — send it now
+                            actual_id = existing["id"]
+                            planned_row = None
+                            mid = existing.get("matched_planned_id")
+                            if mid is not None:
+                                planned_row = db_mod.get_planned_by_id(conn, mid)
+                            try:
+                                feedback = planner_mod.generate_workout_feedback(
+                                    actual=existing,
+                                    planned=planned_row,
+                                    athlete_context=athlete_context,
+                                    athlete_narrative=athlete_narrative,
+                                    api_key=api_key,
+                                )
+                                if feedback:
+                                    notifier.send(feedback)
+                                db_mod.update_actual_feedback_sent(conn, actual_id)
+                                _db_log(db_path, "INFO", "poller", "feedback_sent",
+                                        f"{existing.get('name', act_intervals_id)} (retry)",
+                                        activity_id=act_intervals_id, conn=conn)
+                            except Exception as exc:
+                                _log(f"WARNING: feedback retry failed for {act_intervals_id}: {exc}")
+                                _db_log(db_path, "ERROR", "poller", "feedback_failed",
+                                        f"Feedback retry failed for {act_intervals_id}: {exc}",
+                                        activity_id=act_intervals_id,
+                                        extra={"traceback": traceback.format_exc()},
+                                        conn=conn)
+                        elif debug:
+                            _log(f"Already seen: {act_intervals_id} — skipping")
                         continue
 
                     new_count += 1
                     actual_id = db_mod.insert_actual(conn, mapped)
-                    act_intervals_id = mapped.get("intervals_id", "")
                     _db_log(db_path, "INFO", "poller", "activity_fetched",
                             f"{mapped.get('name', 'Activity')} (intervals_id: {act_intervals_id})",
                             activity_id=act_intervals_id,

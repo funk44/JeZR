@@ -236,7 +236,29 @@ def generate_workout_feedback(
         system=system,
         messages=[{"role": "user", "content": user_prompt}],
     )
-    return message.content[0].text.strip()
+    feedback_text = message.content[0].text.strip()
+
+    # Build preamble identifying the activity
+    sport = actual.get("sport", "").lower()
+    sport_emoji = {
+        "run": "\U0001f3c3",
+        "ride": "\U0001f6b4",
+        "virtualride": "\U0001f6b4",
+        "swim": "\U0001f3ca",
+        "walk": "\U0001f6b6",
+    }.get(sport, "\U0001f3cb")
+    name = actual.get("name", "Activity")
+    distance_km = actual.get("distance_km")
+    date_str = actual.get("date", "")
+    try:
+        d = date.fromisoformat(date_str)
+        date_formatted = d.strftime("%-d %b")
+    except Exception:
+        date_formatted = date_str
+    distance_part = f" ({distance_km}km)" if distance_km else ""
+    preamble = f"{sport_emoji} Feedback — {name}{distance_part} · {date_formatted}\n\n"
+
+    return preamble + feedback_text
 
 
 # ── 1b. Weekly review + plan ──────────────────────────────────────────────────

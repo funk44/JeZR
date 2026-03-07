@@ -107,6 +107,14 @@ def update_planned_intervals_id(
         )
 
 
+def get_planned_by_id(conn: sqlite3.Connection, planned_id: int) -> Optional[dict]:
+    """Return the tbl_planned row matching id, or None."""
+    row = conn.execute(
+        "SELECT * FROM tbl_planned WHERE id = ?", (planned_id,)
+    ).fetchone()
+    return _row_to_dict(row)
+
+
 def get_planned_by_external_id(
     conn: sqlite3.Connection, external_id: str
 ) -> Optional[dict]:
