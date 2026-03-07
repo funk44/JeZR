@@ -1,6 +1,6 @@
 import json
 import sys
-from datetime import date
+from datetime import date, timedelta
 
 _MODEL = "claude-sonnet-4-20250514"
 
@@ -260,6 +260,11 @@ def generate_weekly_review(
     week_block = _format_week_summary(week_summary)
     sample_block = json.dumps(sample_plan, indent=2)
 
+    today = date.today()
+    days_until_monday = (7 - today.weekday()) % 7
+    next_monday = today + timedelta(days=days_until_monday)
+    next_sunday = next_monday + timedelta(days=6)
+
     user_prompt = f"""{athlete_block}
 
 {athlete_narrative or ""}
@@ -268,6 +273,9 @@ WEEK {week_summary.get('week_start')} — {week_summary.get('week_end')}:
 {week_block}
 
 {_PACE_CONVENTIONS}
+
+PROPOSED PLAN TARGET WEEK: {next_monday.isoformat()} to {next_sunday.isoformat()}
+All workout dates in proposed_plan MUST fall within this range. Do not use dates outside this range.
 
 Sample plan schema (your proposed_plan array must match this exactly — field names, pace as integers, duration format):
 {sample_block}
@@ -418,6 +426,11 @@ def revise_plan(
     current_plan_json = json.dumps(current_plan, indent=2)
     sample_block = json.dumps(sample_plan, indent=2)
 
+    today = date.today()
+    days_until_monday = (7 - today.weekday()) % 7
+    next_monday = today + timedelta(days=days_until_monday)
+    next_sunday = next_monday + timedelta(days=6)
+
     user_prompt = f"""{athlete_block}
 
 {athlete_narrative or ""}
@@ -429,6 +442,9 @@ Athlete feedback:
 {feedback}
 
 {_PACE_CONVENTIONS}
+
+PROPOSED PLAN TARGET WEEK: {next_monday.isoformat()} to {next_sunday.isoformat()}
+All workout dates in proposed_plan MUST fall within this range. Do not use dates outside this range.
 
 Sample plan schema (your proposed_plan array must match this exactly — field names, pace as integers, duration format):
 {sample_block}

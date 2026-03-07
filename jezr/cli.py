@@ -648,18 +648,17 @@ def _load_athlete_context() -> dict:
 
 def cmd_upload(args: argparse.Namespace) -> None:
     workouts = _load_workouts_from_file(args.planned)
-    skip_sense_check = getattr(args, "skip_sense_check", False)
 
     validate_only = getattr(args, "validate_only", False)
     if validate_only:
-        ok = _run_validate(workouts, skip_sense_check=skip_sense_check, debug=args.debug)
+        ok = _run_validate(workouts, skip_sense_check=True, debug=args.debug)
         sys.exit(0 if ok else 1)
 
     from dotenv import load_dotenv  # type: ignore
     load_dotenv()
 
-    # Run schema + sense check before touching the API
-    ok = _run_validate(workouts, skip_sense_check=skip_sense_check, debug=args.debug)
+    # Schema validation only — sense check already ran during jezr review
+    ok = _run_validate(workouts, skip_sense_check=True, debug=args.debug)
     if not ok:
         sys.exit(1)
 
@@ -754,7 +753,6 @@ def main() -> None:
     upload_parser.add_argument("--planned", required=True, metavar="FILE", help="Plan JSON file to upload")
     upload_parser.add_argument("--adhoc", action="store_true", help="Skip archiving the plan")
     upload_parser.add_argument("--validate-only", action="store_true", dest="validate_only", help="Validate without uploading")
-    upload_parser.add_argument("--skip-sense-check", action="store_true", dest="skip_sense_check", help="Skip AI sense check")
 
     validate_parser = subparsers.add_parser("validate", help="Validate a plan JSON file without uploading")
     validate_parser.add_argument("--planned", required=True, metavar="FILE", help="Plan JSON file to validate")
