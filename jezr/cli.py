@@ -221,7 +221,7 @@ def _setup_openclaw() -> None:
 
     openclaw_dir = Path(openclaw_dir_str).expanduser()
     heartbeat = openclaw_dir / "HEARTBEAT.md"
-    agent = openclaw_dir / "AGENT.md"
+    agent = openclaw_dir / "AGENTS.md"
 
     if not openclaw_dir.is_dir() or not heartbeat.exists() or not agent.exists():
         print(f"WARNING: OpenClaw directory not found or missing HEARTBEAT.md / AGENT.md at: {openclaw_dir}")
@@ -243,13 +243,13 @@ def _setup_openclaw() -> None:
 
     agent_content = agent.read_text(encoding="utf-8")
     if _JEZR_MARKER in agent_content:
-        print("AGENT.md already contains JeZR configuration — skipping.")
+        print("AGENTS.md already contains JeZR configuration — skipping.")
     else:
         agent.write_text(
             agent_content + _AGENT_BLOCK.format(jezr_cmd=jezr_cmd),
             encoding="utf-8",
         )
-        print("AGENT.md updated.")
+        print("AGENTS.md updated.")
 
     if shutil.which("jezr") is None:
         print()
