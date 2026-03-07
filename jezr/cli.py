@@ -6,6 +6,11 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
+from dotenv import load_dotenv  # type: ignore
+
+# Load .env once at the entry point, from the repo root (parent of this file's dir)
+load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
+
 
 ATHLETE_TEMPLATE_PATH = Path(__file__).parent.parent / "context" / "athlete.template.json"
 ATHLETE_TEMPLATE_MD_PATH = Path(__file__).parent.parent / "context" / "athlete.template.md"
@@ -55,8 +60,6 @@ Here is the template:
 
 def _cmd_setup_import(args: argparse.Namespace, import_file: str) -> None:
     """Import branch of jezr setup --import <file>."""
-    from dotenv import load_dotenv  # type: ignore
-    load_dotenv()
 
     from jezr.planner import import_athlete_profile
 
@@ -524,9 +527,6 @@ def cmd_backup(args: argparse.Namespace) -> None:
 
 
 def cmd_poll(args: argparse.Namespace) -> None:
-    from dotenv import load_dotenv  # type: ignore
-    load_dotenv()
-
     from jezr.config import load_intervals_env, load_claude_env
     from jezr.intervals_client import IntervalsClient
     from jezr.notifier import get_notifier
@@ -564,9 +564,6 @@ def cmd_poll(args: argparse.Namespace) -> None:
 
 
 def cmd_review(args: argparse.Namespace) -> None:
-    from dotenv import load_dotenv  # type: ignore
-    load_dotenv()
-
     from jezr.config import load_claude_env
     from jezr.notifier import get_notifier
     from jezr.review import run_weekly_review, run_week_to_date_summary, run_feedback_revision
@@ -727,9 +724,6 @@ def cmd_upload(args: argparse.Namespace) -> None:
     if validate_only:
         ok = _run_validate(workouts, skip_sense_check=True, debug=args.debug)
         sys.exit(0 if ok else 1)
-
-    from dotenv import load_dotenv  # type: ignore
-    load_dotenv()
 
     # Schema validation only — sense check already ran during jezr review
     ok = _run_validate(workouts, skip_sense_check=True, debug=args.debug)

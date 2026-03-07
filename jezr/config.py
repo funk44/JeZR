@@ -1,6 +1,12 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from zoneinfo import ZoneInfo
+
+from dotenv import load_dotenv  # type: ignore
+
+# Safe fallback — no-op if env vars are already loaded (e.g. via cli.py entry point)
+load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 
 
 LOCAL_TIMEZONE_DEFAULT = "Australia/Melbourne"
