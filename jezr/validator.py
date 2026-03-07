@@ -115,7 +115,8 @@ def sense_check_plan(
         raw = message.content[0].text.strip()
         if debug:
             print(f"sense_check_plan: raw response: {raw}", file=sys.stderr)
-        return json.loads(raw)
+        clean = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        return json.loads(clean)
     except json.JSONDecodeError as exc:
         print(
             f"WARNING: sense_check_plan: failed to parse Claude response as JSON: {exc}",

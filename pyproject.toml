@@ -11,7 +11,7 @@ dependencies = [
     "httpx",
     "python-dateutil",
     "anthropic",
-    "dotenv"
+    "python-dotenv"
 ]
 
 [project.scripts]
